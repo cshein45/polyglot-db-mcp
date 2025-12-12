@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.hyperpolymath/polyglot-db-mcp",
-  "description": "One MCP server. 16 databases. Zero context switching. Query PostgreSQL, MongoDB, Neo4j, Elasticsearch, Redis, and 11 more databases through a unified interface.",
+  "description": "One MCP server for 16 databases. PostgreSQL, MongoDB, Neo4j, Redis, and more.",
   "repository": {
     "url": "https://github.com/hyperpolymath/polyglot-db-mcp",
     "source": "github"
