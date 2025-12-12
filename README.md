@@ -24,17 +24,53 @@ Modern applications use multiple databases — SQL for transactions, Redis for c
 
 ---
 
-## Quick Start
+## Installation
 
-### 1. Add to Claude Code
+### Option A: Direct (Recommended for development)
 
 ```bash
+# Clone the repository
+git clone https://github.com/hyperpolymath/polyglot-db-mcp.git
+cd polyglot-db-mcp
+
+# Add to Claude Code
 claude mcp add polyglot-db -- deno run \
   --allow-net --allow-read --allow-write --allow-env \
-  /path/to/polyglot-db-mcp/index.js
+  $(pwd)/index.js
 ```
 
-### 2. Configure your databases
+### Option B: Container (Recommended for production)
+
+```bash
+# Using nerdctl (containerd)
+nerdctl run -d --name polyglot-db \
+  -e POSTGRES_HOST=host.docker.internal \
+  -e MONGODB_URL=mongodb://host.docker.internal:27017 \
+  ghcr.io/hyperpolymath/polyglot-db-mcp:latest
+
+# Using podman
+podman run -d --name polyglot-db \
+  -e POSTGRES_HOST=host.containers.internal \
+  ghcr.io/hyperpolymath/polyglot-db-mcp:latest
+
+# Using docker
+docker run -d --name polyglot-db \
+  -e POSTGRES_HOST=host.docker.internal \
+  ghcr.io/hyperpolymath/polyglot-db-mcp:latest
+```
+
+### Option C: Deno Deploy (Serverless)
+
+```bash
+# Deploy directly to Deno Deploy
+deployctl deploy --project=polyglot-db index.js
+```
+
+---
+
+## Quick Start
+
+### 1. Configure your databases
 
 Create a `.env` file or export environment variables:
 
@@ -45,7 +81,7 @@ export DRAGONFLY_HOST=localhost
 export ELASTICSEARCH_URL=http://localhost:9200
 ```
 
-### 3. Ask Claude
+### 2. Ask Claude
 
 ```
 "What databases are connected?"
@@ -135,6 +171,11 @@ POSTGRES_PORT=5432
 POSTGRES_DATABASE=mydb
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=secret
+
+# Connection pool (optional)
+POSTGRES_POOL_MAX=10         # Max connections
+POSTGRES_IDLE_TIMEOUT=30     # Seconds before idle connection closed
+POSTGRES_CONNECT_TIMEOUT=10  # Connection timeout in seconds
 ```
 </details>
 
@@ -144,6 +185,13 @@ POSTGRES_PASSWORD=secret
 ```bash
 MONGODB_URL=mongodb://localhost:27017
 MONGODB_DATABASE=mydb
+
+# Connection pool (optional)
+MONGODB_POOL_MAX=10           # Max connections
+MONGODB_POOL_MIN=1            # Min connections
+MONGODB_IDLE_TIMEOUT=30000    # Idle timeout in ms
+MONGODB_CONNECT_TIMEOUT=10000 # Connect timeout in ms
+MONGODB_SERVER_TIMEOUT=30000  # Server selection timeout in ms
 ```
 </details>
 
@@ -243,6 +291,12 @@ MARIADB_PORT=3306
 MARIADB_USER=root
 MARIADB_PASSWORD=secret
 MARIADB_DATABASE=mydb
+
+# Connection pool (optional)
+MARIADB_POOL_MAX=10            # Max connections
+MARIADB_ACQUIRE_TIMEOUT=10000  # Acquire timeout in ms
+MARIADB_IDLE_TIMEOUT=30000     # Idle timeout in ms
+MARIADB_CONNECT_TIMEOUT=10000  # Connect timeout in ms
 ```
 </details>
 
@@ -415,8 +469,9 @@ Then import in `index.js` and rebuild.
 | Version | Status | Highlights |
 |---------|--------|------------|
 | **1.0.0** | Released | 16 databases, ReScript core, CI/CD |
-| 1.1.0 | Planned | Connection pooling, better errors |
-| 2.0.0 | Vision | 100% ReScript, RSR Gold |
+| **1.1.0** | In Progress | Connection pooling, container images, better errors |
+| 1.2.0 | Planned | Cross-database pipelines, caching helpers |
+| 2.0.0 | Vision | 100% ReScript, RSR Gold compliance |
 
 ---
 

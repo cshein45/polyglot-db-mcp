@@ -16,18 +16,30 @@ const config = {
   database: Deno.env.get("POSTGRES_DATABASE") || "postgres",
   username: Deno.env.get("POSTGRES_USER") || "postgres",
   password: Deno.env.get("POSTGRES_PASSWORD") || "",
+  // Pool configuration
+  max: parseInt(Deno.env.get("POSTGRES_POOL_MAX") || "10"),
+  idle_timeout: parseInt(Deno.env.get("POSTGRES_IDLE_TIMEOUT") || "30"),
+  connect_timeout: parseInt(Deno.env.get("POSTGRES_CONNECT_TIMEOUT") || "10"),
 };
 
 export async function connect() {
   if (sql) return sql;
-  sql = postgres({
-    host: config.host,
-    port: config.port,
-    database: config.database,
-    username: config.username,
-    password: config.password,
-  });
-  return sql;
+  try {
+    sql = postgres({
+      host: config.host,
+      port: config.port,
+      database: config.database,
+      username: config.username,
+      password: config.password,
+      max: config.max,
+      idle_timeout: config.idle_timeout,
+      connect_timeout: config.connect_timeout,
+      onnotice: () => {}, // Suppress notices
+    });
+    return sql;
+  } catch (error) {
+    throw new Error(`PostgreSQL connection failed: ${error.message}. Check POSTGRES_HOST, POSTGRES_PORT, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DATABASE.`);
+  }
 }
 
 export async function disconnect() {

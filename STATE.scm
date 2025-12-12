@@ -42,7 +42,7 @@
       (rsr-compliance . "Bronze"))
 
     (focus
-      (current-phase . "v1.0.0 Released")
+      (current-phase . "v1.1.0 In Progress")
       (deadline . #f)
       (blocking-projects . ()))
 
@@ -110,9 +110,10 @@
       (compiled-output . "lib/es6/"))
 
     (ci-cd
-      (github-actions . "language-policy, rescript-build, deno-check, lint")
+      (github-actions . "language-policy, rescript-build, deno-check, lint, container-build")
       (hooks . "pre-commit enforces no TypeScript")
-      (linguist . ".gitattributes marks ReScript as primary"))
+      (linguist . ".gitattributes marks ReScript as primary")
+      (container . "ghcr.io/hyperpolymath/polyglot-db-mcp"))
 
     (critical-next
       ("v1.1.0: Connection pooling"
@@ -146,10 +147,11 @@
                  "CI/CD with language policy")))
 
       ((phase . "1.1.0 - Improvements")
-       (status . "planned")
-       (goals . ("Connection pooling"
-                 "Better error messages"
-                 "Test suite")))
+       (status . "in-progress")
+       (goals . ("Connection pooling" ;; DONE
+                 "Container images (Dockerfile, CI)"  ;; DONE
+                 "Better error messages" ;; DONE
+                 "Installation docs")))
 
       ((phase . "2.0.0 - Full ReScript")
        (status . "vision")

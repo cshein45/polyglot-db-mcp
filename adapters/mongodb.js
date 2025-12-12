@@ -14,14 +14,30 @@ let db = null;
 const config = {
   url: Deno.env.get("MONGODB_URL") || "mongodb://localhost:27017",
   database: Deno.env.get("MONGODB_DATABASE") || "test",
+  // Pool configuration
+  maxPoolSize: parseInt(Deno.env.get("MONGODB_POOL_MAX") || "10"),
+  minPoolSize: parseInt(Deno.env.get("MONGODB_POOL_MIN") || "1"),
+  maxIdleTimeMS: parseInt(Deno.env.get("MONGODB_IDLE_TIMEOUT") || "30000"),
+  connectTimeoutMS: parseInt(Deno.env.get("MONGODB_CONNECT_TIMEOUT") || "10000"),
+  serverSelectionTimeoutMS: parseInt(Deno.env.get("MONGODB_SERVER_TIMEOUT") || "30000"),
 };
 
 export async function connect() {
   if (client && db) return db;
-  client = new MongoClient(config.url);
-  await client.connect();
-  db = client.db(config.database);
-  return db;
+  try {
+    client = new MongoClient(config.url, {
+      maxPoolSize: config.maxPoolSize,
+      minPoolSize: config.minPoolSize,
+      maxIdleTimeMS: config.maxIdleTimeMS,
+      connectTimeoutMS: config.connectTimeoutMS,
+      serverSelectionTimeoutMS: config.serverSelectionTimeoutMS,
+    });
+    await client.connect();
+    db = client.db(config.database);
+    return db;
+  } catch (error) {
+    throw new Error(`MongoDB connection failed: ${error.message}. Check MONGODB_URL and MONGODB_DATABASE.`);
+  }
 }
 
 export async function disconnect() {

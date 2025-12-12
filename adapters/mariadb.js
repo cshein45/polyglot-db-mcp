@@ -16,13 +16,25 @@ const config = {
   user: Deno.env.get("MARIADB_USER") || "root",
   password: Deno.env.get("MARIADB_PASSWORD") || "",
   database: Deno.env.get("MARIADB_DATABASE") || undefined,
-  connectionLimit: 5,
+  // Pool configuration
+  connectionLimit: parseInt(Deno.env.get("MARIADB_POOL_MAX") || "10"),
+  acquireTimeout: parseInt(Deno.env.get("MARIADB_ACQUIRE_TIMEOUT") || "10000"),
+  idleTimeout: parseInt(Deno.env.get("MARIADB_IDLE_TIMEOUT") || "30000"),
+  connectTimeout: parseInt(Deno.env.get("MARIADB_CONNECT_TIMEOUT") || "10000"),
 };
 
 export async function connect() {
   if (pool) return pool;
-  pool = mariadb.createPool(config);
-  return pool;
+  try {
+    pool = mariadb.createPool(config);
+    // Test connection
+    const conn = await pool.getConnection();
+    conn.release();
+    return pool;
+  } catch (error) {
+    pool = null;
+    throw new Error(`MariaDB connection failed: ${error.message}. Check MARIADB_HOST, MARIADB_PORT, MARIADB_USER, MARIADB_PASSWORD, MARIADB_DATABASE.`);
+  }
 }
 
 export async function disconnect() {
