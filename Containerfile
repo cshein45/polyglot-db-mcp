@@ -15,8 +15,8 @@ COPY adapters/ ./adapters/
 COPY lib/ ./lib/
 COPY src/ ./src/
 
-# Cache dependencies
-RUN deno cache index.js
+# Cache dependencies using deno.json config
+RUN deno cache --config=deno.json index.js
 
 # Create non-root user
 RUN addgroup --system polyglot && adduser --system --ingroup polyglot polyglot
@@ -25,5 +25,5 @@ USER polyglot
 # MCP server runs on stdio, expose for HTTP mode if needed
 EXPOSE 8080
 
-# Default entrypoint
-ENTRYPOINT ["deno", "run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "index.js"]
+# Default entrypoint using deno.json config
+ENTRYPOINT ["deno", "run", "--config=deno.json", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--unstable-kv", "index.js"]
