@@ -9,6 +9,8 @@
     "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env --unstable-kv index.js"
   },
   "imports": {
+    "@modelcontextprotocol/sdk/server/mcp.js": "npm:@modelcontextprotocol/sdk@1.24.3/server/mcp.js",
+    "@modelcontextprotocol/sdk/server/stdio.js": "npm:@modelcontextprotocol/sdk@1.24.3/server/stdio.js",
     "@modelcontextprotocol/sdk/": "npm:@modelcontextprotocol/sdk@1.24.3/",
     "surrealdb": "npm:surrealdb@1.0.0",
     "ioredis": "npm:ioredis@5.4.1",
