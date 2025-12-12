@@ -1,0 +1,43 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Jonathan D.A. Jewell
+
+= Maintainers
+
+== Current Maintainers
+
+[cols="1,1,1",options="header"]
+|===
+|Name |GitHub |Role
+
+|Jonathan D.A. Jewell |https://github.com/hyperpolymath[@hyperpolymath] |Lead Maintainer
+|===
+
+== Responsibilities
+
+* Review and merge pull requests
+* Triage issues
+* Release management
+* Security response
+* Community moderation
+
+== Becoming a Maintainer
+
+Maintainer status is granted based on:
+
+* Sustained quality contributions
+* Demonstrated understanding of the codebase
+* Alignment with project values
+* Community trust
+
+== Contact
+
+* *GitHub Issues*: For public discussions
+* *Email*: For security or private matters
+
+== Attribution
+
+Contributors are recognized in:
+
+* Git commit history
+* `.well-known/humans.txt`
+* Release notes (for significant contributions)

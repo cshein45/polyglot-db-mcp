@@ -2,11 +2,10 @@
 # SPDX-FileCopyrightText: 2025 Jonathan D.A. Jewell
 #
 # Containerfile - works with podman, nerdctl, docker, buildah
-# Uses Chainguard Wolfi base for security (minimal attack surface, no shell)
-# Alternative: cerro-terro (when available)
+# Uses official Deno image (distroless-based, minimal attack surface)
+# Alternative: cerro-terro or Chainguard Wolfi (when available/authenticated)
 
-# Wolfi-based Deno image from Chainguard
-FROM cgr.dev/chainguard/deno:latest
+FROM denoland/deno:2.1.4
 
 WORKDIR /app
 
@@ -16,12 +15,12 @@ COPY adapters/ ./adapters/
 COPY lib/ ./lib/
 COPY src/ ./src/
 
-# Cache dependencies (run as root during build)
-USER root
+# Cache dependencies
 RUN deno cache index.js
 
-# Run as non-root for security
-USER nonroot
+# Create non-root user
+RUN addgroup --system polyglot && adduser --system --ingroup polyglot polyglot
+USER polyglot
 
 # MCP server runs on stdio, expose for HTTP mode if needed
 EXPOSE 8080
