@@ -1,6 +1,6 @@
 {
   "name": "polyglot-db-mcp",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Unified MCP server for multiple databases - 20 databases via MCP protocol",
   "type": "module",
   "main": "index.js",
