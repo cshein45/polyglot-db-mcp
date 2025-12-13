@@ -14,7 +14,7 @@
   '((metadata
       (format-version . "1.0")
       (created-at . "2025-12-12T00:00:00Z")
-      (last-updated . "2025-12-12T00:00:00Z"))
+      (last-updated . "2025-12-13T00:00:00Z"))
 
     ;;; ==================================================
     ;;; PROJECT IDENTITY
@@ -32,16 +32,16 @@
 
     (siblings
       ((name . "arango-mcp")
-       (relation . "similar")
+       (relation . "merged")
        (description . "ArangoDB MCP server")
        (url . "https://github.com/hyperpolymath/arango-mcp")
-       (notes . "Standalone ArangoDB adapter, could be merged"))
+       (notes . "MERGED 2025-12-13: Now integrated as adapters/arangodb.js"))
 
       ((name . "virtuoso-mcp")
-       (relation . "similar")
+       (relation . "merged")
        (description . "Virtuoso SPARQL MCP server")
        (url . "https://github.com/hyperpolymath/virtuoso-mcp")
-       (notes . "SPARQL/RDF triplestore adapter"))
+       (notes . "MERGED 2025-12-13: Now integrated as adapters/virtuoso.js"))
 
       ((name . "Rhodium-Standard-Repositories")
        (relation . "standard")
@@ -53,7 +53,19 @@
        (relation . "tooling")
        (description . "Project state tracking format")
        (url . "https://github.com/hyperpolymath/state.scm")
-       (notes . "Source of STATE.scm format")))
+       (notes . "Source of STATE.scm format"))
+
+      ((name . "polyglot-container-mcp")
+       (relation . "sibling")
+       (description . "Unified MCP for 3 container runtimes (nerdctl, podman, docker)")
+       (url . "https://github.com/hyperpolymath/polyglot-container-mcp")
+       (notes . "Same architecture, different domain. Analyzed 2025-12-13: keep separate."))
+
+      ((name . "polyglot-ssg-mcp")
+       (relation . "sibling")
+       (description . "Unified MCP for 28 static site generators")
+       (url . "https://github.com/hyperpolymath/polyglot-ssg-mcp")
+       (notes . "Same architecture, different domain. Analyzed 2025-12-13: keep separate.")))
 
     ;;; ==================================================
     ;;; UPSTREAM DEPENDENCIES
@@ -95,7 +107,12 @@
       ((name . "MariaDB Connector")
        (type . "library")
        (url . "https://github.com/mariadb-corporation/mariadb-connector-nodejs")
-       (version . "3.x")))
+       (version . "3.x"))
+
+      ((name . "ArangoDB JS Driver")
+       (type . "library")
+       (url . "https://github.com/arangodb/arangojs")
+       (version . "10.x")))
 
     ;;; ==================================================
     ;;; DOWNSTREAM CONSUMERS
@@ -115,19 +132,29 @@
       (layer . "infrastructure")
       (role . "database-abstraction")
       (scope . "multi-database")
-      (uniqueness . "Unified MCP interface to 11+ databases"))
+      (uniqueness . "Unified MCP interface to 20 databases"))
 
     ;;; ==================================================
     ;;; INTEGRATION OPPORTUNITIES
     ;;; ==================================================
 
     (integration-opportunities
-      ("Merge arango-mcp and virtuoso-mcp into this project"
-       "Add CouchDB adapter"
-       "Add Neo4j adapter"
-       "Add InfluxDB adapter for time series"
-       "Add Cassandra adapter"
-       "Create n8n workflow templates using this MCP"))
+      ("Create n8n workflow templates using this MCP"
+       "Add ClickHouse adapter"
+       "Add ScyllaDB adapter"))
+
+    ;;; ==================================================
+    ;;; COMPLETED INTEGRATIONS
+    ;;; ==================================================
+
+    (completed-integrations
+      ("arango-mcp merged 2025-12-13"
+       "virtuoso-mcp merged 2025-12-13"
+       "Neo4j adapter added"
+       "InfluxDB adapter added"
+       "Polyglot family dedup analysis 2025-12-13: keep db/container/ssg separate"
+       "CouchDB adapter added 2025-12-13"
+       "Cassandra adapter added 2025-12-13"))
 
     ;;; ==================================================
     ;;; STANDARDS & COMPLIANCE

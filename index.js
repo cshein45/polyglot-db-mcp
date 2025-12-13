@@ -29,6 +29,10 @@ import * as mongodb from "./adapters/mongodb.js";
 import * as neo4j from "./adapters/neo4j.js";
 import * as elasticsearch from "./adapters/elasticsearch.js";
 import * as influxdb from "./adapters/influxdb.js";
+import * as arangodb from "./adapters/arangodb.js";
+import * as virtuoso from "./adapters/virtuoso.js";
+import * as couchdb from "./adapters/couchdb.js";
+import * as cassandra from "./adapters/cassandra.js";
 
 // Registry of all adapters
 const adapters = {
@@ -48,6 +52,10 @@ const adapters = {
   neo4j,
   elasticsearch,
   influxdb,
+  arangodb,
+  virtuoso,
+  couchdb,
+  cassandra,
 };
 
 const server = new McpServer({

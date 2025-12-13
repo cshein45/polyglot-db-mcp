@@ -7,9 +7,9 @@
 :icons: font
 :source-highlighter: rouge
 
-*One MCP server. 16 databases. Zero context switching.*
+*One MCP server. 20 databases. Zero context switching.*
 
-Query PostgreSQL, MongoDB, Neo4j, Elasticsearch, Redis, and 11 more databases through a single unified interface. Built with ReScript, runs on Deno.
+Query PostgreSQL, MongoDB, Neo4j, Elasticsearch, Redis, and 15 more databases through a single unified interface. Built with ReScript, runs on Deno.
 
 image:https://img.shields.io/badge/License-MIT%20OR%20AGPL--3.0-blue.svg[License: MIT OR AGPL-3.0,link=LICENSE.txt]
 image:https://img.shields.io/badge/Runtime-Deno-black.svg[Runtime: Deno,link=https://deno.land]
@@ -119,6 +119,17 @@ export ELASTICSEARCH_URL=http://localhost:9200
 
 |*MongoDB* |SSPL |Flexible schemas, horizontal scaling |`mongo_*`
 |*SurrealDB* |BSL/Apache 2.0 |Multi-model (doc + graph + SQL) |`surreal_*`
+|*ArangoDB* |Apache 2.0 (FOSS) |Multi-model (doc + graph + KV), AQL |`arango_*`
+|*CouchDB* |Apache 2.0 (FOSS) |Document DB with HTTP API, Mango queries |`couchdb_*`
+|===
+
+=== Wide Column
+
+[cols="1,1,2,1",options="header"]
+|===
+|Database |License |Best For |Tools
+
+|*Cassandra* |Apache 2.0 (FOSS) |Distributed, high availability, time-series |`cassandra_*`
 |===
 
 === Graph
@@ -128,6 +139,7 @@ export ELASTICSEARCH_URL=http://localhost:9200
 |Database |License |Best For |Tools
 
 |*Neo4j* |GPL v3 / Commercial |Relationships, social networks, fraud detection |`neo4j_*`
+|*Virtuoso* |GPL v2 / Commercial |RDF triplestore, SPARQL, linked data |`virtuoso_*`
 |===
 
 === Cache & Key-Value
@@ -273,6 +285,48 @@ SURREAL_USERNAME=root
 SURREAL_PASSWORD=root
 ----
 
+=== ArangoDB
+
+[source,bash]
+----
+ARANGO_URL=http://localhost:8529
+ARANGO_DATABASE=_system
+ARANGO_USERNAME=root
+ARANGO_PASSWORD=
+----
+
+=== Virtuoso
+
+[source,bash]
+----
+VIRTUOSO_ENDPOINT=http://localhost:8890/sparql
+VIRTUOSO_UPDATE_ENDPOINT=http://localhost:8890/sparql-auth
+VIRTUOSO_USERNAME=
+VIRTUOSO_PASSWORD=
+VIRTUOSO_DEFAULT_GRAPH=
+----
+
+=== CouchDB
+
+[source,bash]
+----
+COUCHDB_URL=http://localhost:5984
+COUCHDB_USERNAME=admin
+COUCHDB_PASSWORD=secret
+COUCHDB_DATABASE=mydb
+----
+
+=== Cassandra
+
+[source,bash]
+----
+CASSANDRA_CONTACT_POINTS=localhost    # comma-separated list
+CASSANDRA_DATACENTER=datacenter1
+CASSANDRA_KEYSPACE=mykeyspace
+CASSANDRA_USERNAME=cassandra
+CASSANDRA_PASSWORD=cassandra
+----
+
 === SQLite
 
 [source,bash]
@@ -355,7 +409,7 @@ ITOP_PASSWORD=secret
 === Meta Tools
 
 ----
-db_list              List all 16 supported databases
+db_list              List all 18 supported databases
 db_status            Check which databases are currently connected
 db_help [database]   Get available tools for a specific database
 ----

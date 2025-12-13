@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**polyglot-db-mcp** is a unified MCP (Model Context Protocol) server providing access to 11+ databases through a single interface. It runs on Deno and exposes database operations as MCP tools.
+**polyglot-db-mcp** is a unified MCP (Model Context Protocol) server providing access to 18 databases through a single interface. It runs on Deno and exposes database operations as MCP tools.
 
 ## Quick Reference
 
@@ -29,6 +29,10 @@ Read these files to understand the project's current status and design decisions
 | Database | Type | Status | Notes |
 |----------|------|--------|-------|
 | SurrealDB | Multi-model | Implemented | Full CRUD + SurrealQL |
+| ArangoDB | Multi-model | Implemented | Document + graph + KV, AQL queries |
+| Virtuoso | RDF/SPARQL | Implemented | Triplestore, linked data, full-text search |
+| CouchDB | Document | Implemented | HTTP REST API, Mango queries |
+| Cassandra | Wide Column | Implemented | Distributed, CQL queries |
 | Dragonfly/Redis | Cache | Implemented | Redis-compatible |
 | XTDB | Bitemporal | Implemented | Datalog queries |
 | SQLite | Embedded SQL | Implemented | Full SQL support |
@@ -46,6 +50,10 @@ Read these files to understand the project's current status and design decisions
 index.js          — Main entry, MCP server setup
 adapters/         — Database-specific adapters
   ├── surrealdb.js
+  ├── arangodb.js
+  ├── virtuoso.js
+  ├── couchdb.js
+  ├── cassandra.js
   ├── dragonfly.js
   ├── xtdb.js
   ├── sqlite.js
@@ -100,6 +108,6 @@ Currently manual testing. Future: add `deno test` suite.
 
 ## Related Projects
 
-- [arango-mcp](https://github.com/hyperpolymath/arango-mcp) — ArangoDB MCP server
-- [virtuoso-mcp](https://github.com/hyperpolymath/virtuoso-mcp) — Virtuoso SPARQL MCP server
+- [arango-mcp](https://github.com/hyperpolymath/arango-mcp) — ArangoDB MCP server (merged into this project)
+- [virtuoso-mcp](https://github.com/hyperpolymath/virtuoso-mcp) — Virtuoso SPARQL MCP server (merged into this project)
 - [Rhodium-Standard-Repositories](https://github.com/hyperpolymath/Rhodium-Standard-Repositories) — RSR compliance framework
