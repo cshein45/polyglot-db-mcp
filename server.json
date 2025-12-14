@@ -1,7 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
   "name": "io.github.hyperpolymath/poly-db-mcp",
-  "description": "Unified MCP server for 20 databases: SurrealDB, ArangoDB, Virtuoso SPARQL, CouchDB, Cassandra, Redis/Dragonfly, XTDB, SQLite, Qdrant, Meilisearch, MariaDB, and more.",
+  "title": "Polyglot Database MCP",
+  "description": "Unified MCP for 20 databases: SurrealDB, ArangoDB, Virtuoso, CouchDB, Cassandra, and more",
   "repository": {
     "url": "https://github.com/hyperpolymath/poly-db-mcp",
     "source": "github"
