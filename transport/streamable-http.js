@@ -12,27 +12,204 @@
  * - Session management with Mcp-Session-Id
  * - SSE streaming responses
  * - Deno Deploy compatible
+ * - Circuit breaker for fault tolerance
+ * - Retry with exponential backoff
+ * - Request timeout protection
+ * - Rate limiting
+ * - Structured logging
  */
 
 const PROTOCOL_VERSION = "2025-06-18";
 
-/**
- * Generate a cryptographically secure session ID
- */
+// ============================================================================
+// Logging Utility
+// ============================================================================
+
+const LogLevel = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+let currentLogLevel = LogLevel.INFO;
+
+function setLogLevel(level) {
+  currentLogLevel = level;
+}
+
+function log(level, message, context = {}) {
+  if (level >= currentLogLevel) {
+    const levelName = Object.keys(LogLevel).find((k) => LogLevel[k] === level);
+    const entry = {
+      timestamp: new Date().toISOString(),
+      level: levelName,
+      message,
+      ...context,
+    };
+    console.error(JSON.stringify(entry));
+  }
+}
+
+// ============================================================================
+// Circuit Breaker (Fault Tolerance)
+// ============================================================================
+
+class CircuitBreaker {
+  constructor(options = {}) {
+    this.failureThreshold = options.failureThreshold || 5;
+    this.resetTimeoutMs = options.resetTimeoutMs || 30000;
+    this.halfOpenRequests = options.halfOpenRequests || 1;
+    this.state = "CLOSED"; // CLOSED, OPEN, HALF_OPEN
+    this.failures = 0;
+    this.lastFailureTime = null;
+    this.halfOpenAttempts = 0;
+  }
+
+  canExecute() {
+    if (this.state === "CLOSED") return true;
+    if (this.state === "OPEN") {
+      if (Date.now() - this.lastFailureTime > this.resetTimeoutMs) {
+        this.state = "HALF_OPEN";
+        this.halfOpenAttempts = 0;
+        log(LogLevel.INFO, "Circuit breaker transitioning to HALF_OPEN");
+        return true;
+      }
+      return false;
+    }
+    // HALF_OPEN
+    return this.halfOpenAttempts < this.halfOpenRequests;
+  }
+
+  recordSuccess() {
+    if (this.state === "HALF_OPEN") {
+      log(LogLevel.INFO, "Circuit breaker closing after successful request");
+    }
+    this.failures = 0;
+    this.state = "CLOSED";
+    this.halfOpenAttempts = 0;
+  }
+
+  recordFailure() {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+    if (this.state === "HALF_OPEN") {
+      this.halfOpenAttempts++;
+    }
+    if (this.failures >= this.failureThreshold) {
+      this.state = "OPEN";
+      log(LogLevel.WARN, "Circuit breaker OPEN", { failures: this.failures });
+    }
+  }
+
+  getState() {
+    return { state: this.state, failures: this.failures };
+  }
+}
+
+// ============================================================================
+// Retry with Exponential Backoff
+// ============================================================================
+
+async function retryWithBackoff(
+  fn,
+  options = {}
+) {
+  const maxRetries = options.maxRetries || 3;
+  const baseDelayMs = options.baseDelayMs || 100;
+  const maxDelayMs = options.maxDelayMs || 5000;
+  const retryableErrors = options.retryableErrors || ["ECONNRESET", "ETIMEDOUT", "ENOTFOUND"];
+
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const isRetryable =
+        retryableErrors.some((e) => error.code === e || error.message?.includes(e));
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw error;
+      }
+
+      const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+      const jitter = Math.random() * delay * 0.1;
+      log(LogLevel.DEBUG, "Retrying after error", {
+        attempt: attempt + 1,
+        delay: delay + jitter,
+        error: error.message,
+      });
+      await new Promise((r) => setTimeout(r, delay + jitter));
+    }
+  }
+  throw lastError;
+}
+
+// ============================================================================
+// Rate Limiter
+// ============================================================================
+
+class RateLimiter {
+  constructor(options = {}) {
+    this.windowMs = options.windowMs || 60000;
+    this.maxRequests = options.maxRequests || 100;
+    this.requests = new Map(); // sessionId -> timestamps[]
+  }
+
+  isAllowed(sessionId) {
+    const now = Date.now();
+    const windowStart = now - this.windowMs;
+
+    let timestamps = this.requests.get(sessionId) || [];
+    timestamps = timestamps.filter((t) => t > windowStart);
+
+    if (timestamps.length >= this.maxRequests) {
+      return false;
+    }
+
+    timestamps.push(now);
+    this.requests.set(sessionId, timestamps);
+    return true;
+  }
+
+  cleanup() {
+    const now = Date.now();
+    const windowStart = now - this.windowMs;
+    for (const [sessionId, timestamps] of this.requests) {
+      const valid = timestamps.filter((t) => t > windowStart);
+      if (valid.length === 0) {
+        this.requests.delete(sessionId);
+      } else {
+        this.requests.set(sessionId, valid);
+      }
+    }
+  }
+}
+
+// ============================================================================
+// Request Timeout
+// ============================================================================
+
+function withTimeout(promise, timeoutMs, message = "Request timeout") {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(message)), timeoutMs)
+    ),
+  ]);
+}
+
+// ============================================================================
+// Session ID Generation
+// ============================================================================
+
 function generateSessionId() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
-  );
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-/**
- * Session store for managing MCP sessions
- */
+// ============================================================================
+// Session Store
+// ============================================================================
+
 class SessionStore {
   constructor(ttlMs = 30 * 60 * 1000) {
-    // 30 min default TTL
     this.sessions = new Map();
     this.ttlMs = ttlMs;
   }
@@ -46,9 +223,12 @@ class SessionStore {
       initialized: false,
       pendingMessages: [],
       eventCounter: 0,
+      requestCount: 0,
+      errorCount: 0,
     };
     this.sessions.set(sessionId, session);
     this.cleanup();
+    log(LogLevel.DEBUG, "Session created", { sessionId });
     return session;
   }
 
@@ -61,15 +241,21 @@ class SessionStore {
   }
 
   delete(sessionId) {
+    log(LogLevel.DEBUG, "Session deleted", { sessionId });
     return this.sessions.delete(sessionId);
   }
 
   cleanup() {
     const now = Date.now();
+    let cleaned = 0;
     for (const [id, session] of this.sessions) {
       if (now - session.lastAccess > this.ttlMs) {
         this.sessions.delete(id);
+        cleaned++;
       }
+    }
+    if (cleaned > 0) {
+      log(LogLevel.DEBUG, "Sessions cleaned up", { count: cleaned });
     }
   }
 
@@ -77,11 +263,19 @@ class SessionStore {
     session.eventCounter++;
     return `${session.id}-${session.eventCounter}`;
   }
+
+  getStats() {
+    return {
+      activeSessions: this.sessions.size,
+      oldestSession: Math.min(...[...this.sessions.values()].map((s) => s.createdAt)),
+    };
+  }
 }
 
-/**
- * Format a JSON-RPC message as an SSE event
- */
+// ============================================================================
+// SSE Utilities
+// ============================================================================
+
 function formatSSEEvent(data, eventId = null) {
   let event = "event: message\n";
   event += `data: ${JSON.stringify(data)}\n`;
@@ -92,9 +286,6 @@ function formatSSEEvent(data, eventId = null) {
   return event;
 }
 
-/**
- * Create an SSE stream response
- */
 function createSSEStream() {
   const encoder = new TextEncoder();
   let controller;
@@ -117,53 +308,66 @@ function createSSEStream() {
   };
 }
 
-/**
- * Streamable HTTP Transport for MCP servers
- */
+// ============================================================================
+// Streamable HTTP Transport
+// ============================================================================
+
 export class StreamableHttpTransport {
   constructor(server, options = {}) {
     this.server = server;
     this.options = {
       path: options.path || "/mcp",
-      allowedOrigins: options.allowedOrigins || null, // null = check Origin but allow all
+      allowedOrigins: options.allowedOrigins || null,
       enableCors: options.enableCors ?? true,
       sessionTtlMs: options.sessionTtlMs || 30 * 60 * 1000,
+      requestTimeoutMs: options.requestTimeoutMs || 30000,
+      enableRateLimiting: options.enableRateLimiting ?? true,
+      rateLimitWindowMs: options.rateLimitWindowMs || 60000,
+      rateLimitMaxRequests: options.rateLimitMaxRequests || 100,
+      enableCircuitBreaker: options.enableCircuitBreaker ?? true,
       ...options,
     };
+
     this.sessions = new SessionStore(this.options.sessionTtlMs);
     this.messageHandlers = new Map();
+    this.circuitBreaker = new CircuitBreaker();
+    this.rateLimiter = new RateLimiter({
+      windowMs: this.options.rateLimitWindowMs,
+      maxRequests: this.options.rateLimitMaxRequests,
+    });
+
+    // Periodic cleanup
+    if (typeof Deno !== "undefined") {
+      setInterval(() => {
+        this.sessions.cleanup();
+        this.rateLimiter.cleanup();
+      }, 60000);
+    }
   }
 
-  /**
-   * Set the message handler for incoming JSON-RPC messages
-   */
   onMessage(handler) {
     this.messageHandler = handler;
   }
 
-  /**
-   * Set the close handler
-   */
   onClose(handler) {
     this.closeHandler = handler;
   }
 
-  /**
-   * Handle incoming HTTP request
-   */
   async handleRequest(request) {
+    const startTime = Date.now();
     const url = new URL(request.url);
     const path = url.pathname;
 
-    // Check if request is for the MCP endpoint
+    // Check path
     if (path !== this.options.path) {
       return new Response("Not Found", { status: 404 });
     }
 
-    // Security: Check Origin header
+    // Security: Check Origin
     const origin = request.headers.get("Origin");
     if (origin && this.options.allowedOrigins) {
       if (!this.options.allowedOrigins.includes(origin)) {
+        log(LogLevel.WARN, "Forbidden origin", { origin });
         return new Response("Forbidden: Invalid Origin", { status: 403 });
       }
     }
@@ -173,22 +377,59 @@ export class StreamableHttpTransport {
       return this.corsResponse(request, 204);
     }
 
-    // Route by method
-    switch (request.method) {
-      case "POST":
-        return this.handlePost(request);
-      case "GET":
-        return this.handleGet(request);
-      case "DELETE":
-        return this.handleDelete(request);
-      default:
-        return new Response("Method Not Allowed", { status: 405 });
+    // Circuit breaker check
+    if (this.options.enableCircuitBreaker && !this.circuitBreaker.canExecute()) {
+      log(LogLevel.WARN, "Circuit breaker open, rejecting request");
+      return this.jsonResponse(
+        { error: "Service temporarily unavailable" },
+        503
+      );
+    }
+
+    try {
+      let response;
+      switch (request.method) {
+        case "POST":
+          response = await withTimeout(
+            this.handlePost(request),
+            this.options.requestTimeoutMs,
+            "Request processing timeout"
+          );
+          break;
+        case "GET":
+          response = await this.handleGet(request);
+          break;
+        case "DELETE":
+          response = await this.handleDelete(request);
+          break;
+        default:
+          response = new Response("Method Not Allowed", { status: 405 });
+      }
+
+      if (this.options.enableCircuitBreaker) {
+        this.circuitBreaker.recordSuccess();
+      }
+
+      log(LogLevel.DEBUG, "Request completed", {
+        method: request.method,
+        path,
+        status: response.status,
+        durationMs: Date.now() - startTime,
+      });
+
+      return response;
+    } catch (error) {
+      if (this.options.enableCircuitBreaker) {
+        this.circuitBreaker.recordFailure();
+      }
+      log(LogLevel.ERROR, "Request failed", {
+        method: request.method,
+        error: error.message,
+      });
+      return this.jsonResponse({ error: error.message }, 500);
     }
   }
 
-  /**
-   * Handle POST - Client sending messages
-   */
   async handlePost(request) {
     const sessionId = request.headers.get("Mcp-Session-Id");
     const accept = request.headers.get("Accept") || "";
@@ -201,31 +442,38 @@ export class StreamableHttpTransport {
       return this.jsonResponse({ error: "Invalid JSON" }, 400);
     }
 
-    // Check if this is an initialize request
+    // Validate JSON-RPC structure
+    const messages = Array.isArray(body) ? body : [body];
+    for (const msg of messages) {
+      if (!msg.jsonrpc || msg.jsonrpc !== "2.0") {
+        return this.jsonResponse({ error: "Invalid JSON-RPC version" }, 400);
+      }
+    }
+
     const isInitialize =
       body.method === "initialize" ||
       (Array.isArray(body) && body.some((m) => m.method === "initialize"));
 
     let session;
     if (isInitialize) {
-      // Create new session for initialize
       session = this.sessions.create();
     } else {
-      // Require existing session for other requests
       if (!sessionId) {
-        return this.jsonResponse(
-          { error: "Missing Mcp-Session-Id header" },
-          400
-        );
+        return this.jsonResponse({ error: "Missing Mcp-Session-Id header" }, 400);
       }
       session = this.sessions.get(sessionId);
       if (!session) {
         return this.jsonResponse({ error: "Session not found" }, 404);
       }
+
+      // Rate limiting
+      if (this.options.enableRateLimiting && !this.rateLimiter.isAllowed(sessionId)) {
+        log(LogLevel.WARN, "Rate limit exceeded", { sessionId });
+        return this.jsonResponse({ error: "Rate limit exceeded" }, 429);
+      }
     }
 
-    // Process the message(s)
-    const messages = Array.isArray(body) ? body : [body];
+    session.requestCount++;
     const responses = [];
 
     for (const message of messages) {
@@ -236,6 +484,7 @@ export class StreamableHttpTransport {
             responses.push(response);
           }
         } catch (error) {
+          session.errorCount++;
           responses.push({
             jsonrpc: "2.0",
             id: message.id,
@@ -248,28 +497,20 @@ export class StreamableHttpTransport {
       }
     }
 
-    // Determine response format
     if (responses.length === 0) {
-      // No response needed (notification)
       return this.acceptedResponse(session.id);
     }
 
     if (wantsSSE && responses.length > 1) {
-      // Return as SSE stream
       return this.sseResponse(session, responses);
     }
 
-    // Return as JSON
     const result = responses.length === 1 ? responses[0] : responses;
     return this.jsonResponse(result, 200, session.id);
   }
 
-  /**
-   * Handle GET - Server-to-client SSE stream
-   */
   async handleGet(request) {
     const sessionId = request.headers.get("Mcp-Session-Id");
-    const lastEventId = request.headers.get("Last-Event-ID");
 
     if (!sessionId) {
       return this.jsonResponse({ error: "Missing Mcp-Session-Id header" }, 400);
@@ -280,18 +521,12 @@ export class StreamableHttpTransport {
       return this.jsonResponse({ error: "Session not found" }, 404);
     }
 
-    // Create SSE stream for server-initiated messages
     const sse = createSSEStream();
 
-    // Send any pending messages
     for (const msg of session.pendingMessages) {
       sse.send(msg, this.sessions.nextEventId(session));
     }
     session.pendingMessages = [];
-
-    // Keep stream open for future messages
-    // In Deno Deploy, we need to close eventually
-    // For now, close after sending pending messages
     sse.close();
 
     return this.corsResponse(
@@ -308,9 +543,6 @@ export class StreamableHttpTransport {
     );
   }
 
-  /**
-   * Handle DELETE - Session termination
-   */
   async handleDelete(request) {
     const sessionId = request.headers.get("Mcp-Session-Id");
 
@@ -330,9 +562,6 @@ export class StreamableHttpTransport {
     return new Response(null, { status: 204 });
   }
 
-  /**
-   * Send a server-initiated message to a session
-   */
   sendToSession(sessionId, message) {
     const session = this.sessions.get(sessionId);
     if (session) {
@@ -340,9 +569,15 @@ export class StreamableHttpTransport {
     }
   }
 
-  /**
-   * Create JSON response with appropriate headers
-   */
+  // Health check data
+  getHealth() {
+    return {
+      status: this.circuitBreaker.state === "OPEN" ? "degraded" : "healthy",
+      circuitBreaker: this.circuitBreaker.getState(),
+      sessions: this.sessions.getStats(),
+    };
+  }
+
   jsonResponse(data, status = 200, sessionId = null) {
     const headers = {
       "Content-Type": "application/json",
@@ -361,9 +596,6 @@ export class StreamableHttpTransport {
     return new Response(JSON.stringify(data), { status, headers });
   }
 
-  /**
-   * Create 202 Accepted response
-   */
   acceptedResponse(sessionId) {
     const headers = {
       "MCP-Protocol-Version": PROTOCOL_VERSION,
@@ -377,9 +609,6 @@ export class StreamableHttpTransport {
     return new Response(null, { status: 202, headers });
   }
 
-  /**
-   * Create SSE stream response
-   */
   sseResponse(session, messages) {
     const sse = createSSEStream();
 
@@ -403,13 +632,8 @@ export class StreamableHttpTransport {
     return new Response(sse.stream, { status: 200, headers });
   }
 
-  /**
-   * Create CORS response
-   */
   corsResponse(request, status = 200, headers = {}, body = null) {
-    const responseHeaders = {
-      ...headers,
-    };
+    const responseHeaders = { ...headers };
     if (this.options.enableCors) {
       responseHeaders["Access-Control-Allow-Origin"] =
         request.headers.get("Origin") || "*";
@@ -425,105 +649,14 @@ export class StreamableHttpTransport {
   }
 }
 
-/**
- * Create a Deno.serve handler for the MCP server
- */
-export function createHttpHandler(mcpServer, options = {}) {
-  const transport = new StreamableHttpTransport(mcpServer, options);
+// Export utilities for external use
+export {
+  CircuitBreaker,
+  RateLimiter,
+  retryWithBackoff,
+  withTimeout,
+  setLogLevel,
+  LogLevel,
+};
 
-  // Bridge between transport and MCP server
-  transport.onMessage(async (message) => {
-    // The MCP SDK server handles the message internally
-    // We need to invoke the server's request handler
-    return await mcpServer._handleRequest(message);
-  });
-
-  return async (request) => {
-    return transport.handleRequest(request);
-  };
-}
-
-/**
- * Adapter to make MCP SDK server work with Streamable HTTP
- */
-export class McpHttpAdapter {
-  constructor(mcpServer) {
-    this.server = mcpServer;
-    this.transport = new StreamableHttpTransport(this, {});
-    this.requestHandlers = new Map();
-    this.notificationHandlers = new Map();
-  }
-
-  /**
-   * Register a request handler (mirrors MCP SDK pattern)
-   */
-  setRequestHandler(schema, handler) {
-    this.requestHandlers.set(schema.method, { schema, handler });
-  }
-
-  /**
-   * Register a notification handler
-   */
-  setNotificationHandler(schema, handler) {
-    this.notificationHandlers.set(schema.method, { schema, handler });
-  }
-
-  /**
-   * Handle incoming JSON-RPC message
-   */
-  async handleMessage(message) {
-    if (message.method) {
-      // Request or notification
-      const handler =
-        this.requestHandlers.get(message.method) ||
-        this.notificationHandlers.get(message.method);
-
-      if (handler) {
-        try {
-          const result = await handler.handler(message.params || {});
-          if (message.id !== undefined) {
-            return {
-              jsonrpc: "2.0",
-              id: message.id,
-              result,
-            };
-          }
-          return undefined; // Notification - no response
-        } catch (error) {
-          if (message.id !== undefined) {
-            return {
-              jsonrpc: "2.0",
-              id: message.id,
-              error: {
-                code: -32603,
-                message: error.message,
-              },
-            };
-          }
-        }
-      } else {
-        if (message.id !== undefined) {
-          return {
-            jsonrpc: "2.0",
-            id: message.id,
-            error: {
-              code: -32601,
-              message: `Method not found: ${message.method}`,
-            },
-          };
-        }
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * Create HTTP request handler for Deno.serve
-   */
-  createHandler() {
-    this.transport.onMessage((msg) => this.handleMessage(msg));
-    return (request) => this.transport.handleRequest(request);
-  }
-}
-
-export default { StreamableHttpTransport, createHttpHandler, McpHttpAdapter };
+export default { StreamableHttpTransport, CircuitBreaker, RateLimiter };
