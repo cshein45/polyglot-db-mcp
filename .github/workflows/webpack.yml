@@ -24,7 +24,7 @@ jobs:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.1.1
       with:
         node-version: ${{ matrix.node-version }}
 
