@@ -1,64 +1,54 @@
-# SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2025 Jonathan D.A. Jewell
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# RSR-compliant .gitattributes
 
-# Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf
 
-# ============================================================
-# ReScript - PRIMARY LANGUAGE
-# ============================================================
-*.res text eol=lf linguist-language=ReScript
-*.resi text eol=lf linguist-language=ReScript
+# Source
+*.rs    text eol=lf diff=rust
+*.ex    text eol=lf diff=elixir
+*.exs   text eol=lf diff=elixir
+*.jl    text eol=lf
+*.res   text eol=lf
+*.resi  text eol=lf
+*.ada   text eol=lf diff=ada
+*.adb   text eol=lf diff=ada
+*.ads   text eol=lf diff=ada
+*.hs    text eol=lf
+*.chpl  text eol=lf
+*.scm   text eol=lf
+*.ncl   text eol=lf
+*.nix   text eol=lf
 
-# Compiled ReScript output - mark as generated (excluded from stats)
-lib/** linguist-generated=true
-*.res.js linguist-generated=true
+# Docs
+*.md    text eol=lf diff=markdown
+*.adoc  text eol=lf
+*.txt   text eol=lf
 
-# ============================================================
-# JavaScript - LEGACY (being phased out in v2.0.0)
-# ============================================================
-*.js text eol=lf
-*.mjs text eol=lf
-*.json text eol=lf
+# Data
+*.json  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.toml  text eol=lf
 
-# Mark legacy JS adapters as vendored (reduced weight in stats)
-adapters/*.js linguist-vendored=true
-
-# ============================================================
-# Documentation (excluded from language stats)
-# ============================================================
-*.md text eol=lf linguist-documentation=true
-*.adoc text eol=lf linguist-documentation=true
-*.txt text eol=lf linguist-documentation=true
-
-# Scheme state files are documentation, not executable code
-*.scm text eol=lf linguist-documentation=true
-
-# ============================================================
-# Configuration
-# ============================================================
-*.yml text eol=lf linguist-detectable=false
-*.yaml text eol=lf linguist-detectable=false
-*.toml text eol=lf linguist-detectable=false
-.gitignore text eol=lf
+# Config
+.gitignore     text eol=lf
 .gitattributes text eol=lf
-justfile text eol=lf linguist-detectable=false
-rescript.json text eol=lf linguist-detectable=false
-package.json text eol=lf linguist-detectable=false
-deno.json text eol=lf linguist-detectable=false
+justfile       text eol=lf
+Makefile       text eol=lf
+Containerfile  text eol=lf
 
-# Shell scripts
-*.sh text eol=lf
+# Scripts
+*.sh   text eol=lf
 
-# ============================================================
-# Generated/Artifacts (excluded from stats)
-# ============================================================
-node_modules/** linguist-generated=true
-package-lock.json linguist-generated=true
-deno.lock linguist-generated=true
+# Binary
+*.png   binary
+*.jpg   binary
+*.gif   binary
+*.pdf   binary
+*.woff2 binary
+*.zip   binary
+*.gz    binary
 
-# ============================================================
-# Binary files
-# ============================================================
-*.db binary
-*.sqlite binary
+# Lock files
+Cargo.lock  text eol=lf -diff
+flake.lock  text eol=lf -diff
