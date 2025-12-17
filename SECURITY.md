@@ -1,21 +1,29 @@
 # Security Policy
 
-## Supported Versions
+> **Note**: For the full security policy, see [SECURITY.adoc](./SECURITY.adoc).
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+## Supported Versions
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 1.x.x   | :white_check_mark: |
+| < 1.0   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+We take security seriously. If you discover a security vulnerability:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+1. **For critical vulnerabilities**: Contact the maintainer directly
+2. **For non-critical issues**: Open an issue with `[SECURITY]` prefix
+
+### Response Timeline
+
+- **Acknowledgement**: Within 24 hours
+- **Initial assessment**: Within 72 hours
+- **Resolution**: 7-30 days depending on severity
+
+## Known Security Considerations
+
+- All database credentials must be provided via environment variables
+- This server is designed for trusted environments (AI assistants/MCP clients)
+- SQL-based adapters accept raw queries - ensure proper access controls

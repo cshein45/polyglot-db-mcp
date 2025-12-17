@@ -64,9 +64,12 @@ Out of scope:
 
 === Input Validation
 
-* All user inputs are validated before database operations
-* SQL injection prevention through parameterized queries
 * JSON inputs are parsed safely with error handling
+* Query parameters use parameterized queries where supported
+* **Important**: Table/column identifiers are NOT sanitized in some adapters
+** SQL-based adapters (SQLite, MariaDB, PostgreSQL) accept raw identifiers
+** This is by design for MCP use cases (trusted AI clients)
+** For untrusted input, use the query tools with full parameterization
 
 == Security Headers (for HTTP-based databases)
 
